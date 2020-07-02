@@ -61,6 +61,7 @@
     src: "KPScript-{{ kpscript_version }}.exe"
     dest: "/usr/lib/keepass2/KPScript.exe"
     state: link
+    force: yes
 - name: Install kpscript helper script
   copy:
     src: kpscript
