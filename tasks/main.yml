@@ -39,7 +39,7 @@
       - libsecret-tools
 - name: Check if KPScript already installed
   stat:
-    path: /usr/lib/keepass2/KPScript.exe
+    path: /usr/lib/keepass2/KPScript-{{ kpscript_version }}.exe
   register: kpscript_bin
 - name: Download KPScript
   get_url:
@@ -54,8 +54,13 @@
     remote_src: yes
   when: not kpscript_bin.stat.exists
 - name: Install KPScript binary
-  command: install -D -m644 /tmp/KPScript.exe "/usr/lib/keepass2/KPScript.exe"
+  command: install -D -m644 /tmp/KPScript.exe "/usr/lib/keepass2/KPScript-{{ kpscript_version }}.exe"
   when: not kpscript_bin.stat.exists
+- name: Symlink default KPScript
+  file:
+    src: "KPScript-{{ kpscript_version }}.exe"
+    dest: "/usr/lib/keepass2/KPScript.exe"
+    state: link
 - name: Install kpscript helper script
   copy:
     src: kpscript
