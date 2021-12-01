@@ -3,6 +3,13 @@
   command: grep -oP 'UBUNTU_CODENAME=\K.*' /etc/os-release
   register: distro
   changed_when: False
+- name: Update apt cache.
+  apt: update_cache=yes cache_valid_time=3600
+- name: Install some required base packages
+  apt:
+    pkg:
+      - dirmngr
+      - unzip
 - name: Add Keepass Apt signing key on remote server to keyring
   apt_key:
     data: "{{ lookup('file', 'julianTaylorPPA.gpg') }}"
@@ -45,6 +52,7 @@
   file:
     path: "/opt/kpscript-{{ kpscript_version }}"
     state: directory
+    mode: 0755
 - name: Download KPScript
   get_url:
     url: http://keepass.info/extensions/v2/kpscript/KPScript-{{ kpscript_version }}.zip
