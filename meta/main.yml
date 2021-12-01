@@ -10,9 +10,6 @@ galaxy_info:
     - xenial
     - bionic
     - focal
-  - name: Debian
-    versions:
-    - buster
   galaxy_tags:
     - keepass
     - keepass2
