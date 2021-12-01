@@ -46,7 +46,7 @@
       - libsecret-tools
 - name: Check if KPScript already installed
   stat:
-    path: /opt/kpscript-{{ kpscript_version }}/KPScript-{{ kpscript_version }}.exe
+    path: /opt/kpscript-{{ kpscript_version }}/KPScript.exe
   register: kpscript_bin
 - name: Create KPScript directory
   file:
