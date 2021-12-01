@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Include this role
+      include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
