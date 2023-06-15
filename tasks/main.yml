@@ -4,7 +4,9 @@
   register: distro
   changed_when: False
 - name: Update apt cache.
-  apt: update_cache=yes cache_valid_time=3600
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
 - name: Install some required base packages
   apt:
     pkg:
@@ -57,6 +59,7 @@
     url: http://keepass.info/extensions/v2/kpscript/KPScript-{{ kpscript_version }}.zip
     checksum: "sha256:{{ kpscript_sha256 }}"
     dest: /tmp/
+    mode: 0644
   when: not kpscript_bin.stat.exists
 - name: Unarchive KPScript
   unarchive:
@@ -66,6 +69,7 @@
   when: not kpscript_bin.stat.exists
 - name: Install KPScript binary
   command: install -D -m644 /tmp/KPScript.exe "/opt/kpscript-{{ kpscript_version }}/KPScript.exe"
+  changed_when: false
   when: not kpscript_bin.stat.exists
 - name: Symlink default KPScript
   file:
