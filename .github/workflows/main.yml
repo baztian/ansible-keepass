@@ -17,21 +17,14 @@ jobs:
       - name: yaml-lint
         uses: ibiqlik/action-yamllint@v3
       - name: Run ansible-lint
-        uses: ansible/ansible-lint-action@master
-        with:
-          targets: "."
-          override-deps: ansible-lint==5.3.2
+        uses: ansible-community/ansible-lint-action@main
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         distro:
-          - ubuntu2004
-          - ubuntu1804
-          - ubuntu1604
+          - ubuntu2204
     steps:
       - uses: actions/checkout@v2
       - name: molecule
         uses: robertdebock/molecule-action@2.6.8
-        env:
-          MOLECULE_DISTRO: ${{ matrix.distro }}

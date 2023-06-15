@@ -1,0 +1,4 @@
+skip_list:
+  - 'fqcn-builtins'
+# Don't know how to work around this issue
+  - 'name[template]' # Jinja templates should only be at the end of ‘name’.
