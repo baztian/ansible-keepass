@@ -12,12 +12,11 @@
       - unzip
 - name: Add Keepass Apt signing key on remote server to keyring
   apt_key:
-    data: "{{ lookup('file', 'julianTaylorPPA.gpg') }}"
-    id: 57A0E8DEA026F8D8173E90A57858088158B80F90
-    state: present
+    id: A8BD96F8FD24E96B60232807B3B4C3CECC10C662
+    keyserver: keyserver.ubuntu.com
 - name: Add apt repo for Keepass 2
   apt_repository:
-    repo: "{{ item  }} http://ppa.launchpad.net/jtaylor/keepass/ubuntu {{ distro.stdout }} main"
+    repo: "{{ item  }} http://ppa.launchpad.net/dlech/keepass2-plugins/ubuntu {{ distro.stdout }} main"
     state: present
   with_items:
     - deb
