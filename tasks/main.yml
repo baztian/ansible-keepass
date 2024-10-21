@@ -12,6 +12,11 @@
     pkg:
       - dirmngr
       - unzip
+- name: Ensure /etc/apt/keyrings/ exists
+  file:
+    path: /etc/apt/keyrings/
+    state: directory
+    mode: '0755'
 - name: Add Keepass Apt signing key on remote server to keyring
   apt_key:
     id: 5738AE8480447DDF
@@ -40,7 +45,7 @@
     path: /usr/lib/keepass2/Plugins
     state: directory
     mode: 0755
-- name: Check if KeePassRPC-{{ keepassrpc-version}} (Firefox integration requirement) already installed
+- name: Check if KeePassRPC-{{ keepassrpc-version }} (Firefox integration requirement) already installed
   stat:
     path: /usr/lib/keepass2/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}
   register: keepassrpc_bin
