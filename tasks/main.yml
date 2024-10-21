@@ -45,7 +45,7 @@
     path: /usr/lib/keepass2/Plugins
     state: directory
     mode: 0755
-- name: Check if KeePassRPC-{{ keepassrpc-version }} (Firefox integration requirement) already installed
+- name: Check if KeePassRPC-{{ keepassrpc_version }} (Firefox integration requirement) already installed
   stat:
     path: /usr/lib/keepass2/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}
   register: keepassrpc_bin
