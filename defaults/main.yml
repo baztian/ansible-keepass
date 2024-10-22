@@ -1,3 +1,7 @@
 ---
 kpscript_version: 2.45
 kpscript_sha256: c596baaa77bdd8c250581734d026bb48898a22494191408d8224fc417e847b05
+keepassrpc_version: 2.0.2
+keepassrpc_sha256: fad2fa6f502b9b6624385c952bfe9d5f18077c843e855e738b34a88d5b6fc67e
+keetraytotp_version: 0.108.0
+keetraytotp_sha256: 4f7251a9bbb79cad04aee96d1809c6b36d43285a9f3834fef5330fc97ae8bc09

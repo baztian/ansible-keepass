@@ -12,25 +12,19 @@
     pkg:
       - dirmngr
       - unzip
+- name: Ensure /etc/apt/keyrings/ exists
+  file:
+    path: /etc/apt/keyrings/
+    state: directory
+    mode: '0755'
 - name: Add Keepass Apt signing key on remote server to keyring
   apt_key:
-    id: A8BD96F8FD24E96B60232807B3B4C3CECC10C662
+    id: 5738AE8480447DDF
     keyserver: keyserver.ubuntu.com
+    keyring: /etc/apt/keyrings/ubuntuhandbook1-keepass2.gpg
 - name: Add apt repo for Keepass 2
   apt_repository:
-    repo: "{{ item  }} http://ppa.launchpad.net/dlech/keepass2-plugins/ubuntu {{ distro.stdout }} main"
-    state: present
-  with_items:
-    - deb
-    - deb-src
-- name: Add KeepassKeeFox Plugin Apt signing key on remote server to keyring
-  apt_key:
-    data: "{{ lookup('file', 'davidLechnerPPA.gpg') }}"
-    id: A8BD96F8FD24E96B60232807B3B4C3CECC10C662
-    state: present
-- name: Add apt repo for KeeFox Plugin
-  apt_repository:
-    repo: "{{ item  }} http://ppa.launchpad.net/dlech/keepass2-plugins/ubuntu {{ distro.stdout }} main"
+    repo: "{{ item }} [signed-by=/etc/apt/keyrings/ubuntuhandbook1-keepass2.gpg] http://ppa.launchpad.net/ubuntuhandbook1/keepass2/ubuntu {{ distro.stdout }} main"
     state: present
   with_items:
     - deb
@@ -41,10 +35,48 @@
       - keepass2
       - xsel
       - xdotool
-      # For firefox integration
-      - keepass2-plugin-rpc
       # For (manual) gnome keyring integration
       - libsecret-tools
+      # Following two needed in order to set up plugin cache for keepass2-plugin-rpc
+      - libmono-system-configuration-install4.0-cil
+      - libmono-system-management4.0-cil
+- name: Create keepass Plugins directory
+  file:
+    path: /usr/lib/keepass2/Plugins
+    state: directory
+    mode: 0755
+- name: Check if KeePassRPC-{{ keepassrpc_version }} (Firefox integration requirement) already installed
+  stat:
+    path: /usr/lib/keepass2/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}
+  register: keepassrpc_bin
+- name: Download KeePassRPC {{ keepassrpc_version }}
+  get_url:
+    url: https://github.com/kee-org/keepassrpc/releases/download/v{{ keepassrpc_version }}/KeePassRPC.plgx
+    checksum: "sha256:{{ keepassrpc_sha256 }}"
+    dest: /usr/lib/keepass2/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}
+    mode: 0644
+  when: not keepassrpc_bin.stat.exists
+- name: Symlink default KeePassRPC
+  file:
+    src: KeePassRPC.plgx-{{ keepassrpc_version }}
+    dest: /usr/lib/keepass2/Plugins/KeePassRPC.plgx
+    state: link
+- name: Check if KeeTrayTOTP-{{ keetraytotp_version }} already installed
+  stat:
+    path: /usr/lib/keepass2/Plugins/KeeTrayTOTP.plgx-{{ keetraytotp_version }}
+  register: keetraytotp_bin
+- name: Download KeeTrayTOTP {{ keetraytotp_version }}
+  get_url:
+    url: https://github.com/KeeTrayTOTP/KeeTrayTOTP/releases/download/v{{ keetraytotp_version }}/KeeTrayTOTP.plgx
+    checksum: "sha256:{{ keetraytotp_sha256 }}"
+    dest: /usr/lib/keepass2/Plugins/KeeTrayTOTP.plgx-{{ keetraytotp_version }}
+    mode: 0644
+  when: not keetraytotp_bin.stat.exists
+- name: Symlink default KeeTrayTOTP
+  file:
+    src: KeeTrayTOTP.plgx-{{ keetraytotp_version }}
+    dest: /usr/lib/keepass2/Plugins/KeeTrayTOTP.plgx
+    state: link
 - name: Check if KPScript already installed
   stat:
     path: /opt/kpscript-{{ kpscript_version }}/KPScript.exe
