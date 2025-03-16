@@ -37,9 +37,8 @@
       - xdotool
       # For (manual) gnome keyring integration
       - libsecret-tools
-      # Following two needed in order to set up plugin cache for keepass2-plugin-rpc
-      - libmono-system-configuration-install4.0-cil
-      - libmono-system-management4.0-cil
+      # Following needed in order to set up plugin cache for keepass2-plugin-rpc
+      - mono-complete
 - name: Create keepass Plugins directory
   file:
     path: /usr/lib/keepass2/Plugins
@@ -76,6 +75,22 @@
   file:
     src: KeeTrayTOTP.plgx-{{ keetraytotp_version }}
     dest: /usr/lib/keepass2/Plugins/KeeTrayTOTP.plgx
+    state: link
+- name: Check if Yet-Another-Favicon-Downloader -{{ yetanotherfavicondl_version }} already installed
+  stat:
+    path: /usr/lib/keepass2/Plugins/YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}
+  register: yetanotherfavicondl
+- name: Download Yet-Another-Favicon-Downloader  {{ yetanotherfavicondl_version }}
+  get_url:
+    url: https://github.com/navossoc/KeePass-Yet-Another-Favicon-Downloader/releases/download/v{{ yetanotherfavicondl_version }}/YetAnotherFaviconDownloader.plgx
+    checksum: "sha256:{{ yetanotherfavicondl_sha256 }}"
+    dest: /usr/lib/keepass2/Plugins/YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}
+    mode: 0644
+  when: not yetanotherfavicondl.stat.exists
+- name: Symlink default Yet-Another-Favicon-Downloader 
+  file:
+    src: YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}
+    dest: /usr/lib/keepass2/Plugins/YetAnotherFaviconDownloader.plgx
     state: link
 - name: Check if KPScript already installed
   stat:
