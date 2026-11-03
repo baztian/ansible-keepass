@@ -15,6 +15,7 @@
   apt:
     pkg:
       - ca-certificates
+      - gpg
       - python3-debian
       - unzip
 - name: Remove legacy apt repo for Keepass 2
