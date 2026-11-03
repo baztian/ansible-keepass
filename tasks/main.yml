@@ -3,6 +3,10 @@
   command: grep -oP 'UBUNTU_CODENAME=\K.*' /etc/os-release
   register: distro
   changed_when: False
+  when: ansible_distribution != 'Debian'
+- name: Select KeePass installation directory
+  set_fact:
+    keepass_install_dir: "{{ '/opt/keepass2-portable' if ansible_distribution == 'Debian' else '/usr/lib/keepass2' }}"
 - name: Update apt cache.
   apt:
     update_cache: yes
@@ -10,27 +14,34 @@
 - name: Install some required base packages
   apt:
     pkg:
-      - dirmngr
+      - ca-certificates
+      - python3-debian
       - unzip
-- name: Ensure /etc/apt/keyrings/ exists
-  file:
-    path: /etc/apt/keyrings/
-    state: directory
-    mode: '0755'
-- name: Add Keepass Apt signing key on remote server to keyring
-  apt_key:
-    id: 5738AE8480447DDF
-    keyserver: keyserver.ubuntu.com
-    keyring: /etc/apt/keyrings/ubuntuhandbook1-keepass2.gpg
-- name: Add apt repo for Keepass 2
-  apt_repository:
+- name: Remove legacy apt repo for Keepass 2
+  ansible.builtin.apt_repository:
     repo: "{{ item }} [signed-by=/etc/apt/keyrings/ubuntuhandbook1-keepass2.gpg] http://ppa.launchpad.net/ubuntuhandbook1/keepass2/ubuntu {{ distro.stdout }} main"
-    state: present
+    state: absent
+    update_cache: false
   with_items:
     - deb
     - deb-src
+  when: ansible_distribution != 'Debian'
+- name: Add apt repo for Keepass 2
+  ansible.builtin.deb822_repository:
+    name: keepass2-ppa
+    types:
+      - deb
+      - deb-src
+    uris: https://ppa.launchpadcontent.net/ubuntuhandbook1/keepass2/ubuntu
+    suites: "{{ distro.stdout }}"
+    components: main
+    signed_by: https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF4E48910A020E77056748B745738AE8480447DDF
+    state: present
+  register: keepass2_repository
+  when: ansible_distribution != 'Debian'
 - name: Install keepass packages
   apt:
+    update_cache: "{{ keepass2_repository.changed }}"
     pkg:
       - keepass2
       - xsel
@@ -39,58 +50,121 @@
       - libsecret-tools
       # Following needed in order to set up plugin cache for keepass2-plugin-rpc
       - mono-complete
+  when: ansible_distribution != 'Debian'
+- name: Install KeePass dependencies on Debian
+  apt:
+    pkg:
+      - xsel
+      - xdotool
+      - libsecret-tools
+      - mono-complete
+      - libgcrypt20
+      - libargon2-1
+  when: ansible_distribution == 'Debian'
+- name: Download KeePass portable archive
+  get_url:
+    url: "https://downloads.sourceforge.net/project/keepass/KeePass%202.x/{{ keepass_version }}/KeePass-{{ keepass_version }}.zip"
+    checksum: "sha256:{{ keepass_sha256 }}"
+    dest: "/tmp/KeePass-{{ keepass_version }}.zip"
+    mode: '0644'
+  when: ansible_distribution == 'Debian'
+- name: Create KeePass portable directory
+  file:
+    path: "/opt/keepass2-portable-{{ keepass_version }}"
+    state: directory
+    mode: '0755'
+  when: ansible_distribution == 'Debian'
+- name: Extract KeePass portable archive
+  unarchive:
+    src: "/tmp/KeePass-{{ keepass_version }}.zip"
+    dest: "/opt/keepass2-portable-{{ keepass_version }}"
+    remote_src: yes
+  when: ansible_distribution == 'Debian'
+- name: Symlink current KeePass portable directory
+  file:
+    src: "keepass2-portable-{{ keepass_version }}"
+    dest: /opt/keepass2-portable
+    state: link
+  when: ansible_distribution == 'Debian'
+- name: Install KeePass portable launcher
+  copy:
+    dest: /usr/local/bin/keepass2-portable
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      exec /usr/bin/mono /opt/keepass2-portable/KeePass.exe "$@"
+  when: ansible_distribution == 'Debian'
+- name: Create desktop applications directory
+  file:
+    path: /usr/local/share/applications
+    state: directory
+    mode: '0755'
+  when: ansible_distribution == 'Debian'
+- name: Install KeePass portable desktop entry
+  copy:
+    dest: /usr/local/share/applications/keepass2-portable.desktop
+    mode: '0644'
+    content: |
+      [Desktop Entry]
+      Name=KeePass 2 (Portable)
+      Comment=Password manager
+      Exec=/usr/local/bin/keepass2-portable %f
+      Terminal=false
+      Type=Application
+      Categories=Utility;Security;
+  when: ansible_distribution == 'Debian'
 - name: Create keepass Plugins directory
   file:
-    path: /usr/lib/keepass2/Plugins
+    path: "{{ keepass_install_dir }}/Plugins"
     state: directory
     mode: 0755
 - name: Check if KeePassRPC-{{ keepassrpc_version }} (Firefox integration requirement) already installed
   stat:
-    path: /usr/lib/keepass2/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}
+    path: "{{ keepass_install_dir }}/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}"
   register: keepassrpc_bin
 - name: Download KeePassRPC {{ keepassrpc_version }}
   get_url:
     url: https://github.com/kee-org/keepassrpc/releases/download/v{{ keepassrpc_version }}/KeePassRPC.plgx
     checksum: "sha256:{{ keepassrpc_sha256 }}"
-    dest: /usr/lib/keepass2/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}
+    dest: "{{ keepass_install_dir }}/Plugins/KeePassRPC.plgx-{{ keepassrpc_version }}"
     mode: 0644
   when: not keepassrpc_bin.stat.exists
 - name: Symlink default KeePassRPC
   file:
     src: KeePassRPC.plgx-{{ keepassrpc_version }}
-    dest: /usr/lib/keepass2/Plugins/KeePassRPC.plgx
+    dest: "{{ keepass_install_dir }}/Plugins/KeePassRPC.plgx"
     state: link
 - name: Check if KeeTrayTOTP-{{ keetraytotp_version }} already installed
   stat:
-    path: /usr/lib/keepass2/Plugins/KeeTrayTOTP.plgx-{{ keetraytotp_version }}
+    path: "{{ keepass_install_dir }}/Plugins/KeeTrayTOTP.plgx-{{ keetraytotp_version }}"
   register: keetraytotp_bin
 - name: Download KeeTrayTOTP {{ keetraytotp_version }}
   get_url:
     url: https://github.com/KeeTrayTOTP/KeeTrayTOTP/releases/download/v{{ keetraytotp_version }}/KeeTrayTOTP.plgx
     checksum: "sha256:{{ keetraytotp_sha256 }}"
-    dest: /usr/lib/keepass2/Plugins/KeeTrayTOTP.plgx-{{ keetraytotp_version }}
+    dest: "{{ keepass_install_dir }}/Plugins/KeeTrayTOTP.plgx-{{ keetraytotp_version }}"
     mode: 0644
   when: not keetraytotp_bin.stat.exists
 - name: Symlink default KeeTrayTOTP
   file:
     src: KeeTrayTOTP.plgx-{{ keetraytotp_version }}
-    dest: /usr/lib/keepass2/Plugins/KeeTrayTOTP.plgx
+    dest: "{{ keepass_install_dir }}/Plugins/KeeTrayTOTP.plgx"
     state: link
 - name: Check if Yet-Another-Favicon-Downloader -{{ yetanotherfavicondl_version }} already installed
   stat:
-    path: /usr/lib/keepass2/Plugins/YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}
+    path: "{{ keepass_install_dir }}/Plugins/YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}"
   register: yetanotherfavicondl
 - name: Download Yet-Another-Favicon-Downloader  {{ yetanotherfavicondl_version }}
   get_url:
     url: https://github.com/navossoc/KeePass-Yet-Another-Favicon-Downloader/releases/download/v{{ yetanotherfavicondl_version }}/YetAnotherFaviconDownloader.plgx
     checksum: "sha256:{{ yetanotherfavicondl_sha256 }}"
-    dest: /usr/lib/keepass2/Plugins/YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}
+    dest: "{{ keepass_install_dir }}/Plugins/YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}"
     mode: 0644
   when: not yetanotherfavicondl.stat.exists
 - name: Symlink default Yet-Another-Favicon-Downloader 
   file:
     src: YetAnotherFaviconDownloader.plgx-{{ yetanotherfavicondl_version }}
-    dest: /usr/lib/keepass2/Plugins/YetAnotherFaviconDownloader.plgx
+    dest: "{{ keepass_install_dir }}/Plugins/YetAnotherFaviconDownloader.plgx"
     state: link
 - name: Check if KPScript already installed
   stat:
@@ -126,11 +200,11 @@
 - name: Symlink default KPScript.exe
   file:
     src: "/opt/kpscript/KPScript.exe"
-    dest: "/usr/lib/keepass2/KPScript.exe"
+    dest: "{{ keepass_install_dir }}/KPScript.exe"
     state: link
     force: yes
 - name: Install kpscript helper script
-  copy:
-    src: kpscript
+  template:
+    src: kpscript.j2
     dest: /usr/local/bin/kpscript
     mode: "755"

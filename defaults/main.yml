@@ -1,4 +1,6 @@
 ---
+keepass_version: '2.61.1'
+keepass_sha256: 3952354db9b117e906f7cd4f9f5591065b95186472370da47f46f3e246fea864
 kpscript_version: 2.45
 kpscript_sha256: c596baaa77bdd8c250581734d026bb48898a22494191408d8224fc417e847b05
 keepassrpc_version: 2.0.2
